@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoTranslate — ID → EN</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0d0d0d; color: #e8e8e8;
+    min-height: 100vh; padding: 20px 16px 60px;
+  }
+  .wrapper { max-width: 800px; margin: 0 auto; }
+
+  .header { text-align: center; padding: 32px 0 28px; }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #f7931a, #ffcc44);
+    color: #000; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .header h1 { font-size: clamp(22px,5vw,36px); font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+  .header h1 span {
+    background: linear-gradient(135deg, #f7931a, #ffcc44);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .header p { margin-top: 8px; font-size: 13px; color: #555; }
+
+  /* WORKER URL SETUP */
+  .setup-card {
+    background: #111; border: 1px solid #f7931a33;
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 18px;
+  }
+  .setup-title { font-size: 11px; font-weight: 700; color: #f7931a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .url-input {
+    flex: 1; min-width: 220px; background: #0d0d0d; border: 1px solid #252525;
+    border-radius: 8px; padding: 9px 14px; color: #e0e0e0;
+    font-size: 13px; font-family: monospace; outline: none; transition: border-color 0.15s;
+  }
+  .url-input:focus { border-color: #f7931a55; }
+  .save-btn {
+    background: linear-gradient(135deg, #f7931a, #d97200);
+    color: #000; border: none; font-size: 13px; font-weight: 800;
+    padding: 9px 18px; border-radius: 8px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+  .url-status { font-size: 11px; margin-top: 7px; color: #444; }
+  .url-status.ok { color: #4caf7a; }
+  .setup-hint { font-size: 11px; color: #383838; margin-top: 7px; line-height: 1.65; }
+  .setup-hint code { background: #1a1a1a; padding: 1px 5px; border-radius: 4px; color: #aaa; font-size: 11px; }
+
+  /* TONE */
+  .tone-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .tone-label { font-size: 11px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 1px; }
+  .tone-btn {
+    background: #1a1a1a; border: 1px solid #252525; color: #666;
+    font-size: 12px; font-weight: 600; padding: 6px 14px;
+    border-radius: 20px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .tone-btn:hover { border-color: #f7931a44; color: #bbb; }
+  .tone-btn.active { background: #f7931a18; border-color: #f7931a; color: #f7931a; }
+
+  /* CARD */
+  .card { background: #111; border: 1px solid #1e1e1e; border-radius: 16px; overflow: hidden; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; min-height: 240px; }
+  @media (max-width: 540px) { .panels { grid-template-columns: 1fr; } }
+
+  .panel { display: flex; flex-direction: column; }
+  .panel + .panel { border-left: 1px solid #1a1a1a; }
+  @media (max-width: 540px) { .panel + .panel { border-left: none; border-top: 1px solid #1a1a1a; } }
+
+  .panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 14px 9px; border-bottom: 1px solid #181818;
+  }
+  .panel-lang { font-size: 11px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 1px; }
+  .panel-right { display: flex; gap: 6px; align-items: center; }
+  .char-count { font-size: 11px; color: #383838; }
+
+  .icon-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 3px 7px; border-radius: 6px; font-size: 12px;
+    color: #444; transition: all 0.15s;
+  }
+  .icon-btn.clear:hover { color: #e05555; background: #e0555514; }
+  .icon-btn.copy:hover { color: #f7931a; background: #f7931a14; }
+  .icon-btn.copied { color: #4caf7a !important; }
+
+  textarea {
+    flex: 1; background: transparent; border: none; outline: none;
+    resize: none; font-size: 15px; line-height: 1.75; color: #ddd;
+    padding: 14px; font-family: inherit; min-height: 180px;
+  }
+  textarea::placeholder { color: #2a2a2a; }
+
+  .output-text {
+    flex: 1; padding: 14px; font-size: 15px; line-height: 1.75;
+    color: #ddd; white-space: pre-wrap; word-break: break-word; min-height: 180px;
+  }
+  .placeholder-txt { color: #262626; font-style: italic; user-select: none; }
+
+  .loading-wrap { display: flex; align-items: center; gap: 10px; padding: 14px; color: #444; font-size: 14px; }
+  .dots { display: flex; gap: 4px; }
+  .dots span { width: 6px; height: 6px; background: #f7931a; border-radius: 50%; animation: blink 1.2s ease-in-out infinite; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+  .action-bar {
+    display: flex; align-items: center; padding: 11px 14px;
+    border-top: 1px solid #181818; gap: 12px; flex-wrap: wrap;
+  }
+  .translate-btn {
+    background: linear-gradient(135deg, #f7931a, #d97200);
+    color: #000; border: none; font-size: 14px; font-weight: 800;
+    padding: 10px 22px; border-radius: 10px; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s; white-space: nowrap;
+  }
+  .translate-btn:hover { opacity: 0.88; }
+  .translate-btn:active { transform: scale(0.97); }
+  .translate-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .shortcut { font-size: 11px; color: #2a2a2a; }
+  kbd { background: #1c1c1c; border: 1px solid #2a2a2a; border-radius: 4px; padding: 1px 5px; font-size: 10px; color: #444; font-family: inherit; }
+  .err { color: #e05555; font-size: 12px; flex: 1; display: none; line-height: 1.5; }
+
+  .extras { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .extra-card { flex: 1; min-width: 190px; background: #111; border: 1px solid #1c1c1c; border-radius: 12px; padding: 13px 15px; }
+  .extra-title { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #333; text-transform: uppercase; margin-bottom: 7px; }
+  .extra-body { font-size: 13px; color: #444; line-height: 1.6; min-height: 36px; }
+  .extra-body.live { color: #909090; }
+
+  .history-section { margin-top: 20px; }
+  .history-head { font-size: 10px; font-weight: 700; color: #303030; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .clear-hist { background: none; border: none; color: #303030; font-size: 11px; cursor: pointer; transition: color 0.15s; }
+  .clear-hist:hover { color: #e05555; }
+  .hist-list { display: flex; flex-direction: column; gap: 6px; }
+  .hist-item { background: #111; border: 1px solid #1c1c1c; border-radius: 10px; padding: 9px 13px; cursor: pointer; transition: border-color 0.15s; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
+  .hist-item:hover { border-color: #f7931a44; }
+  .hist-src { color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-dst { color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #252525; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="header">
+    <div class="badge">Crypto Native</div>
+    <h1>Personal <span>Translator</span></h1>
+    <p>Indonesia → English · Native speaker style · Powered by Cloudflare + Claude</p>
+  </div>
+
+  <!-- WORKER URL CONFIG -->
+  <div class="setup-card">
+    <div class="setup-title">⚙️ Worker URL</div>
+    <div class="setup-row">
+      <input type="text" class="url-input" id="workerUrl" placeholder="https://crypto-translator.USERNAME.workers.dev" />
+      <button class="save-btn" id="saveUrlBtn">Save</button>
+    </div>
+    <div class="url-status" id="urlStatus">Belum ada Worker URL yang disimpan.</div>
+    <div class="setup-hint">
+      Isi dengan URL Cloudflare Worker lo, contoh: <code>https://crypto-translator.budi.workers.dev</code><br>
+      URL ini tersimpan di browser lo. Ikuti panduan setup di bawah kalau belum punya Worker.
+    </div>
+  </div>
+
+  <!-- TONE -->
+  <div class="tone-row">
+    <span class="tone-label">Tone:</span>
+    <button class="tone-btn active" data-tone="crypto">🔥 Crypto Twitter</button>
+    <button class="tone-btn" data-tone="casual">💬 Casual Native</button>
+    <button class="tone-btn" data-tone="formal">📄 Formal / Pro</button>
+    <button class="tone-btn" data-tone="degen">🦍 Full Degen</button>
+  </div>
+
+  <!-- MAIN CARD -->
+  <div class="card">
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-lang">🇮🇩 Indonesian</span>
+          <div class="panel-right">
+            <span class="char-count" id="charCount">0 / 1500</span>
+            <button class="icon-btn clear" id="clearBtn">✕</button>
+          </div>
+        </div>
+        <textarea id="inputText" placeholder="Ketik atau paste teks bahasa Indonesia di sini..." maxlength="1500"></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-lang">🇺🇸 English</span>
+          <div class="panel-right">
+            <button class="icon-btn copy" id="copyBtn">Copy</button>
+          </div>
+        </div>
+        <div class="output-text" id="outputText">
+          <span class="placeholder-txt">Translation appears here...</span>
+        </div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="translate-btn" id="translateBtn">⚡ Translate</button>
+      <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span>
+      <span class="err" id="errMsg"></span>
+    </div>
+  </div>
+
+  <!-- EXTRAS -->
+  <div class="extras">
+    <div class="extra-card">
+      <div class="extra-title">📝 Tone Note</div>
+      <div class="extra-body" id="toneNote">Style tips appear after translation.</div>
+    </div>
+    <div class="extra-card">
+      <div class="extra-title">🔀 Alternative</div>
+      <div class="extra-body" id="altPhrase">Alternative phrasing appears here.</div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section" id="histSec" style="display:none">
+    <div class="history-head">
+      Recent
+      <button class="clear-hist" id="clearHistBtn">Clear</button>
+    </div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+
+  <div class="footer">API key tersimpan aman di Cloudflare · Tidak exposed ke browser · Personal use</div>
+</div>
+
+<script>
+let tone = 'crypto';
+let busy = false;
+let hist = [];
+try { hist = JSON.parse(localStorage.getItem('ct_hist') || '[]'); } catch(e) { hist = []; }
+
+const $ = id => document.getElementById(id);
+
+// Worker URL setup
+const workerUrlEl = $('workerUrl');
+const urlStatus = $('urlStatus');
+const saveUrlBtn = $('saveUrlBtn');
+
+function loadWorkerUrl() {
+  const u = localStorage.getItem('ct_worker_url') || '';
+  if (u) {
+    workerUrlEl.value = u;
+    urlStatus.textContent = '✓ Worker URL saved — ready to translate.';
+    urlStatus.className = 'url-status ok';
+  }
+}
+loadWorkerUrl();
+
+saveUrlBtn.addEventListener('click', () => {
+  const u = workerUrlEl.value.trim().replace(/\/$/, '');
+  if (!u) { urlStatus.textContent = 'Masukkan URL Worker dulu.'; urlStatus.className = 'url-status'; return; }
+  if (!u.startsWith('https://')) { urlStatus.textContent = '⚠ URL harus dimulai dengan https://'; urlStatus.className = 'url-status'; return; }
+  localStorage.setItem('ct_worker_url', u);
+  urlStatus.textContent = '✓ Tersimpan! Siap translate.';
+  urlStatus.className = 'url-status ok';
+});
+
+// Tone
+document.querySelectorAll('.tone-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tone = btn.dataset.tone;
+  });
+});
+
+// Input
+const inputText = $('inputText');
+const charCount = $('charCount');
+inputText.addEventListener('input', () => {
+  const n = inputText.value.length;
+  charCount.textContent = `${n} / 1500`;
+  charCount.style.color = n > 1300 ? '#f7931a' : '#383838';
+});
+
+// Clear
+$('clearBtn').addEventListener('click', () => {
+  inputText.value = '';
+  charCount.textContent = '0 / 1500';
+  charCount.style.color = '#383838';
+  $('outputText').innerHTML = '<span class="placeholder-txt">Translation appears here...</span>';
+  $('toneNote').textContent = 'Style tips appear after translation.';
+  $('toneNote').classList.remove('live');
+  $('altPhrase').textContent = 'Alternative phrasing appears here.';
+  $('altPhrase').classList.remove('live');
+  hideErr();
+});
+
+// Copy
+$('copyBtn').addEventListener('click', () => {
+  const t = $('outputText').innerText;
+  if (!t || t.includes('Translation appears')) return;
+  navigator.clipboard.writeText(t).then(() => {
+    const btn = $('copyBtn');
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+});
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doTranslate(); }
+});
+$('translateBtn').addEventListener('click', doTranslate);
+
+// History
+$('clearHistBtn').addEventListener('click', () => {
+  hist = []; localStorage.setItem('ct_hist', '[]'); renderHist();
+});
+
+function showErr(msg) { const e = $('errMsg'); e.textContent = msg; e.style.display = 'block'; }
+function hideErr() { $('errMsg').style.display = 'none'; }
+
+function setLoading(on) {
+  busy = on;
+  const btn = $('translateBtn');
+  btn.disabled = on;
+  btn.textContent = on ? '⏳ Translating...' : '⚡ Translate';
+  if (on) $('outputText').innerHTML = `<div class="loading-wrap"><div class="dots"><span></span><span></span><span></span></div>&nbsp;Translating...</div>`;
+}
+
+async function doTranslate() {
+  if (busy) return;
+  const text = inputText.value.trim();
+  if (!text) { showErr('Masukkan teks Indonesia dulu.'); return; }
+
+  const workerUrl = localStorage.getItem('ct_worker_url') || '';
+  if (!workerUrl) { showErr('Simpan Worker URL dulu (lihat kotak di atas).'); return; }
+
+  hideErr();
+  setLoading(true);
+  $('toneNote').textContent = 'Analyzing...'; $('toneNote').classList.remove('live');
+  $('altPhrase').textContent = 'Generating...'; $('altPhrase').classList.remove('live');
+
+  try {
+    const res = await fetch(workerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, tone })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    $('outputText').textContent = data.translation || '—';
+    $('toneNote').textContent = data.toneNote || '—'; $('toneNote').classList.add('live');
+    $('altPhrase').textContent = data.alternative || '—'; $('altPhrase').classList.add('live');
+
+    addHist(text, data.translation || '—');
+
+  } catch(e) {
+    showErr('Error: ' + (e.message || 'Gagal menghubungi Worker. Cek URL dan coba lagi.'));
+    $('outputText').innerHTML = '<span class="placeholder-txt">Translation appears here...</span>';
+    $('toneNote').textContent = 'Style tips appear after translation.';
+    $('altPhrase').textContent = 'Alternative phrasing appears here.';
+  }
+
+  setLoading(false);
+}
+
+function addHist(src, dst) {
+  hist.unshift({ src, dst });
+  if (hist.length > 8) hist = hist.slice(0, 8);
+  try { localStorage.setItem('ct_hist', JSON.stringify(hist)); } catch(e){}
+  renderHist();
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderHist() {
+  const sec = $('histSec'); const list = $('histList');
+  if (!hist.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  list.innerHTML = hist.map((h, i) => `
+    <div class="hist-item" data-i="${i}">
+      <span class="hist-src">${esc(h.src.slice(0,70))}${h.src.length>70?'…':''}</span>
+      <span class="hist-dst">${esc(h.dst.slice(0,70))}${h.dst.length>70?'…':''}</span>
+    </div>`).join('');
+  list.querySelectorAll('.hist-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const h = hist[+el.dataset.i];
+      inputText.value = h.src;
+      charCount.textContent = `${h.src.length} / 1500`;
+      $('outputText').textContent = h.dst;
+    });
+  });
+}
+
+renderHist();
+</script>
+</body>
+</html>
